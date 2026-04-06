@@ -52,7 +52,6 @@
 
         .chat-item:hover { background: var(--indigo); }
 
-        /* MEJORA: Iluminación de nuevo mensaje */
         .chat-item.unread-alert {
             background: rgba(0, 255, 255, 0.15);
             border-left: 5px solid var(--aqua);
@@ -177,10 +176,9 @@
         .admin-msg { align-self: flex-end; background: var(--indigo); border: 1px solid var(--aqua); color: white; border-bottom-right-radius: 4px; }
         .user-msg { align-self: flex-start; background: var(--glass); border: 1px solid rgba(0, 255, 255, 0.3); color: var(--aqua); border-bottom-left-radius: 4px; }
 
-        /* MEJORA: Confirmación de lectura */
         .msg-meta { display: flex; justify-content: flex-end; align-items: center; font-size: 0.65em; opacity: 0.8; margin-top: 5px; gap: 5px; }
         .read-receipt { font-size: 12px; font-weight: bold; }
-        .read-receipt.read { color: #00ffff; } /* Azul/Aqua para "Visto" */
+        .read-receipt.read { color: #00ffff; } 
         .read-receipt.sent { color: #aaa; }
 
         .input-area {
@@ -189,9 +187,11 @@
             gap: 8px;
             background: rgba(0, 0, 0, 0.85);
             align-items: center;
+            /* MEJORA MÓVIL: Ajuste para evitar que el teclado tape el input */
             padding-bottom: calc(15px + env(safe-area-inset-bottom));
             border-top: 1px solid rgba(75, 0, 130, 0.5);
             z-index: 5;
+            position: relative;
         }
 
         input[type="text"], input[type="email"], input[type="password"] {
@@ -202,7 +202,7 @@
             padding: 12px 15px;
             color: white;
             outline: none;
-            font-size: 16px; 
+            font-size: 16px; /* Evita zoom automático en iOS */
             transition: border-color 0.3s;
         }
         input[type="text"]:focus { border-color: var(--aqua); }
@@ -235,7 +235,6 @@
         #login-modal { position: fixed; inset: 0; background: var(--dark); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
         .login-box { background: #111; padding: 35px 25px; border-radius: 20px; border: 1px solid var(--indigo); text-align: center; width: 100%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 
-        /* Estilos de archivos adjuntos (Documentos/Audio) */
         .file-link { color: var(--aqua); text-decoration: underline; display: flex; align-items: center; gap: 5px; font-weight: bold; }
         audio { height: 35px; width: 220px; max-width: 100%; outline: none; margin-top: 5px; }
 
@@ -246,6 +245,8 @@
             #chat-header { padding-left: 10px; padding-right: 10px; }
             #chatWith { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
             button { padding: 10px 15px; font-size: 14px; }
+            /* MEJORA MÓVIL: Botones de ícono un poco más compactos */
+            .icon-btn { width: 40px; height: 40px; min-width: 40px; font-size: 16px; }
         }
 
         .tab-btn { background: transparent; color: #666; border-bottom: 2px solid transparent; margin-bottom: 20px; border-radius: 0;}
@@ -326,7 +327,7 @@
         
         <input type="text" id="msgInput" placeholder="Mensaje..." onkeypress="handleTyping()" onkeyup="if(event.key==='Enter') sendText()">
         
-        <button class="icon-btn" id="micBtn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()" title="Mantén para grabar audio">🎤</button>
+        <button class="icon-btn" id="micBtn" style="display: none;" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()" title="Mantén para grabar audio">🎤</button>
         <button onclick="sendText()">Enviar</button>
     </div>
 </div>
@@ -338,13 +339,15 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getDatabase, ref, push, onChildAdded, onValue, set, update, remove, off, get, onDisconnect, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
     import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    // MEJORA: Importación de Firebase Cloud Messaging para notificaciones
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCaPEZUjBGlUX0_99OqVLsPlxk-eSCL1XI",
       authDomain: "synthlab-750bf.firebaseapp.com",
       databaseURL: "https://synthlab-750bf-default-rtdb.firebaseio.com",
       projectId: "synthlab-750bf",
-      storageBucket: "synthlab-750bf.firebasestorage.app", /* ¡Asegúrate de que Storage esté habilitado en Firebase! */
+      storageBucket: "synthlab-750bf.firebasestorage.app", 
       messagingSenderId: "318338833192",
       appId: "1:318338833192:web:67f46984d17e0984804e1d",
       measurementId: "G-NJND6KMZ9T"
@@ -354,6 +357,7 @@
     const auth = getAuth(app);
     const db = getDatabase(app);
     const storage = getStorage(app);
+    const messaging = getMessaging(app); // Inicializar Messaging
 
     let currentChatId = null;
     let isAdmin = false;
@@ -362,7 +366,6 @@
     let myName = "";
     let currentUserUID = null;
     
-    // Variables de audio
     let mediaRecorder;
     let audioChunks = [];
 
@@ -429,10 +432,38 @@
         }
     });
 
+    // MEJORA: Solicitar permisos para notificaciones
+    async function setupNotifications(uid) {
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                const token = await getToken(messaging, { 
+                    // Nota: En producción, es altamente recomendado generar un vapidKey en Firebase Console (Cloud Messaging)
+                    // vapidKey: 'TU_LLAVE_VAPID_AQUI' 
+                });
+                if (token) {
+                    set(ref(db, `tokensNotificacion/${uid}`), token);
+                }
+            }
+        } catch (error) {
+            console.log("No se pudieron activar las notificaciones:", error);
+        }
+    }
+
+    // Manejar notificaciones cuando la app está abierta
+    onMessage(messaging, (payload) => {
+        // Reproducir sonido o mostrar alerta visual si el mensaje llega
+        document.getElementById('beep').play();
+        // Podrías mostrar un toast nativo aquí si lo deseas
+    });
+
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUserUID = user.uid;
             isAdmin = user.email === "admin@livechat.com"; 
+
+            // Activar notificaciones al iniciar sesión
+            setupNotifications(user.uid);
 
             get(ref(db, `nombres/${user.uid}`)).then((snapshot) => {
                 const data = snapshot.val();
@@ -496,7 +527,7 @@
         
         if(isAdmin && window.innerWidth < 768) document.getElementById('admin-panel').style.display = 'none';
 
-        const chatRef = query(ref(db, `chats/${chatId}`), limitToLast(100)); // Optimización: Carga solo 100
+        const chatRef = query(ref(db, `chats/${chatId}`), limitToLast(100)); 
         const messagesDiv = document.getElementById('messages');
         messagesDiv.innerHTML = ""; 
         
@@ -506,12 +537,10 @@
             const msgKey = snap.key;
             const isMe = (isAdmin && data.sender === 'Admin') || (!isAdmin && data.sender === 'User');
             
-            // Confirmación de lectura: Si el mensaje no es mío y no está leído, lo marco como leído.
             if(!isMe && !data.read) {
                 update(ref(db, `chats/${chatId}/${msgKey}`), { read: true });
             }
 
-            // Evitar duplicados visuales por actualizaciones de lectura
             if(document.getElementById(`msg-${msgKey}`)) {
                 const receipt = document.getElementById(`receipt-${msgKey}`);
                 if(receipt) receipt.className = data.read ? 'read-receipt read' : 'read-receipt sent';
@@ -523,7 +552,6 @@
             div.className = `msg ${isMe ? 'admin-msg' : 'user-msg'}`;
             const msgTime = new Date(data.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            // Renderizado multimedia según tipo
             let contentHtml = "";
             if(data.type === 'image') contentHtml = `<img src="${data.url}" onclick="window.open('${data.url}')" />`;
             else if(data.type === 'file') contentHtml = `<a href="${data.url}" target="_blank" class="file-link">📄 Ver Documento</a>`;
@@ -546,7 +574,6 @@
             if (!isMe && data.time > (Date.now() - 5000)) document.getElementById('beep').play(); 
         });
 
-        // Escucha de escritura
         onValue(ref(db, `chats/${chatId}/typing`), (snap) => {
             const typing = snap.val();
             const status = document.getElementById('typingStatus');
@@ -563,7 +590,6 @@
             snap.forEach((child) => {
                 const chatId = child.key;
                 
-                // Calcular mensajes sin leer para iluminar
                 let unreadCount = 0;
                 let hasNew = false;
                 child.forEach((msgSnap) => {
@@ -577,7 +603,6 @@
                 onValue(ref(db, `nombres/${chatId}`), (nSnap) => {
                     const info = nSnap.val() || { nombre: "Sin Nombre", email: "Sin Correo" };
                     
-                    // Si ya existe en la lista, lo actualizamos, si no lo creamos
                     let div = document.getElementById(`chat-item-${chatId}`);
                     if(!div) {
                         div = document.createElement('div');
@@ -620,7 +645,6 @@
         }
     };
 
-    // --- MEJORA: Envío optimizado por Storage (Archivos e Imágenes) ---
     window.uploadMedia = async (event) => {
         const file = event.target.files[0];
         if(!file || !currentChatId) return;
@@ -647,7 +671,6 @@
         event.target.value = "";
     };
 
-    // --- MEJORA: Notas de Voz ---
     window.startRecording = async () => {
         if(!currentChatId) return;
         try {
@@ -687,7 +710,6 @@
         }
     };
 
-    // Helper para enviar datos limpios a Firebase
     function sendMessagePayload(dataObj) {
         if (!currentChatId) return;
         const finalName = isAdmin ? document.getElementById('adminDisplayName').value : myName;
@@ -696,7 +718,7 @@
             sender: isAdmin ? 'Admin' : 'User',
             senderName: finalName,
             time: Date.now(),
-            read: false, // Por defecto no leído
+            read: false, 
             ...dataObj
         };
 
@@ -704,6 +726,7 @@
         set(ref(db, `chats/${currentChatId}/typing`), { isTyping: false });
     }
 
+    // Completamos la función que se cortaba al final
     window.sendText = () => {
         const input = document.getElementById('msgInput');
         if (!input.value.trim()) return;

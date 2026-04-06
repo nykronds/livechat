@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Chat Privado - Dr. Jaramillo</title>
     <style>
         :root {
@@ -13,13 +13,20 @@
             --red: #ff4b4b;
         }
 
+        /* MEJORA: Box sizing universal para mejor adaptación en móviles y toque nativo */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
             background-color: var(--dark);
             color: white;
             font-family: 'Segoe UI', sans-serif;
             margin: 0;
             display: flex;
-            height: 100vh;
+            /* MEJORA: 100dvh evita que la barra de direcciones del celular oculte el input */
+            height: 100dvh; 
             width: 100vw;
             overflow: hidden;
         }
@@ -75,7 +82,6 @@
 
         #adminDisplayName {
             width: 100%;
-            box-sizing: border-box;
             background: rgba(0,0,0,0.5);
             border: 1px solid var(--aqua);
             color: white;
@@ -93,26 +99,32 @@
             background: radial-gradient(circle at center, #1a1a2e 0%, #0a0e14 100%);
             position: relative;
             width: 100%;
+            height: 100dvh; /* Asegura que no se pase del viewport dinámico */
         }
 
         #chat-header {
-            padding: 10px 15px;
-            background: rgba(0, 0, 0, 0.7);
+            /* MEJORA: safe-area-inset-top protege el texto de ser tapado por la cámara frontal/notch */
+            padding: calc(10px + env(safe-area-inset-top)) 15px 10px 15px;
+            background: rgba(0, 0, 0, 0.75);
             border-bottom: 1px solid var(--indigo);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: 50px;
+            min-height: 60px;
+            z-index: 5;
+            backdrop-filter: blur(10px); /* Efecto cristal estilo app */
         }
 
         #messages {
             flex: 1;
             padding: 15px;
+            /* MEJORA: un padding extra abajo para que el último mensaje respire */
+            padding-bottom: 20px; 
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 12px;
-            -webkit-overflow-scrolling: touch;
+            -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
         }
 
         /* AJUSTE PARA IMÁGENES GRANDES */
@@ -121,50 +133,75 @@
             height: auto !important;
             display: block;
             margin-top: 8px;
+            border-radius: 8px; /* MEJORA: Suaviza los bordes de la imagen enviada */
         }
 
         .msg {
             padding: 10px 15px;
-            border-radius: 15px;
+            border-radius: 18px;
             max-width: 85%;
-            font-size: 14px;
+            font-size: 15px; /* MEJORA: Tamaño ligeramente mayor para leer bien en celular */
             line-height: 1.4;
             word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15); /* MEJORA: Ligera sombra estilo Telegram */
         }
 
         .sender-name { font-size: 0.75em; margin-bottom: 4px; opacity: 0.8; font-weight: bold; }
-        .admin-msg { align-self: flex-end; background: var(--indigo); border: 1px solid var(--aqua); color: white; }
-        .user-msg { align-self: flex-start; background: var(--glass); border: 1px solid rgba(0, 255, 255, 0.3); color: var(--aqua); }
+        
+        /* MEJORA: Bordes asimétricos para simular las burbujas de diálogo de Telegram/WhatsApp */
+        .admin-msg { 
+            align-self: flex-end; 
+            background: var(--indigo); 
+            border: 1px solid var(--aqua); 
+            color: white; 
+            border-bottom-right-radius: 4px; 
+        }
+        .user-msg { 
+            align-self: flex-start; 
+            background: var(--glass); 
+            border: 1px solid rgba(0, 255, 255, 0.3); 
+            color: var(--aqua); 
+            border-bottom-left-radius: 4px; 
+        }
 
         .input-area {
             padding: 10px 15px;
             display: flex;
             gap: 8px;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.85);
             align-items: center;
-            padding-bottom: 25px; /* Espacio extra para notch de celulares */
+            /* MEJORA: safe-area-inset-bottom evita que el teclado o barra nativa del iPhone tapen el input */
+            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            border-top: 1px solid rgba(75, 0, 130, 0.5);
+            z-index: 5;
         }
 
         input[type="text"], input[type="email"], input[type="password"] {
             flex: 1;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.08);
             border: 1px solid var(--indigo);
             border-radius: 20px;
-            padding: 10px 15px;
+            padding: 12px 15px;
             color: white;
             outline: none;
-            font-size: 16px; /* Evita zoom automático en iOS */
+            font-size: 16px; /* Evita zoom automático en iOS al hacer foco en el teclado */
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--aqua);
         }
 
         button {
             background: var(--aqua);
             color: black;
             border: none;
-            padding: 10px 18px;
+            padding: 12px 18px;
             border-radius: 20px;
             font-weight: bold;
             cursor: pointer;
             white-space: nowrap;
+            font-size: 15px;
         }
 
         .attach-btn {
@@ -173,13 +210,13 @@
             border: 1px solid var(--indigo);
             padding: 0;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            min-width: 40px;
+            width: 44px; /* Un poco más grande para tocar fácil en móvil */
+            height: 44px;
+            min-width: 44px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 18px;
+            font-size: 20px;
             cursor: pointer;
         }
 
@@ -188,18 +225,18 @@
             background: rgba(0,0,0,0.9);
             border: 1px solid var(--indigo);
             color: var(--aqua);
-            padding: 8px;
+            padding: 10px;
             border-radius: 5px;
             margin: 0 15px 10px 15px;
             outline: none;
-            font-size: 13px;
+            font-size: 14px;
         }
 
         #online-status {
-            font-size: 10px;
-            margin-left: 5px;
-            padding: 2px 6px;
-            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 8px;
+            padding: 3px 8px;
+            border-radius: 12px;
             background: rgba(255,0,0,0.1);
             color: #ff4b4b;
             white-space: nowrap;
@@ -219,25 +256,29 @@
 
         .login-box {
             background: #111;
-            padding: 30px 20px;
+            padding: 35px 25px;
             border-radius: 20px;
             border: 1px solid var(--indigo);
             text-align: center;
             width: 100%;
             max-width: 350px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         /* --- MEDIA QUERIES PARA CELULARES --- */
         @media (max-width: 768px) {
             #admin-panel {
                 position: absolute;
-                height: 100%;
-                width: 280px;
+                height: 100dvh; /* Asegura adaptación en móvil */
+                width: 85%; /* Mejor adaptabilidad lateral */
+                max-width: 320px;
+                box-shadow: 5px 0 15px rgba(0,0,0,0.5);
             }
             .msg { max-width: 90%; }
-            .login-box { padding: 20px; }
-            #chat-header { padding: 8px 10px; }
-            #chatWith { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+            .login-box { padding: 25px 20px; }
+            #chat-header { padding-left: 10px; padding-right: 10px; }
+            #chatWith { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+            button { padding: 10px 15px; font-size: 14px; }
         }
 
         .tab-btn { background: transparent; color: #666; border-bottom: 2px solid transparent; margin-bottom: 20px; border-radius: 0;}
@@ -261,7 +302,7 @@
             <div id="nameContainer" style="display: none; margin-top: 10px;">
                 <input type="text" id="authName" placeholder="Tu Nombre Completo">
             </div>
-            <button id="mainAuthBtn" style="width: 100%; margin-top: 15px;" onclick="handleAuth()">Entrar</button>
+            <button id="mainAuthBtn" style="width: 100%; margin-top: 20px;" onclick="handleAuth()">Entrar</button>
         </div>
 
         <div id="profile-completion">
@@ -269,12 +310,12 @@
             <input type="text" id="missingNameInput" placeholder="Nombre y Apellido">
             <button style="width: 100%; margin-top: 15px;" onclick="saveMissingName()">Actualizar y Entrar</button>
         </div>
-        <p id="authHint" style="margin: 15px 0; color: #444; font-size: 10px;">Acceso restringido</p>
+        <p id="authHint" style="margin: 15px 0 0 0; color: #555; font-size: 11px;">Acceso restringido</p>
     </div>
 </div>
 
 <div id="admin-panel">
-    <div style="padding: 15px; border-bottom: 1px solid var(--indigo);">
+    <div style="padding: calc(15px + env(safe-area-inset-top)) 15px 15px 15px; border-bottom: 1px solid var(--indigo);">
         <div style="font-weight: bold; color: var(--aqua); font-size: 14px;">Control de Pacientes</div>
         <input type="text" id="adminDisplayName" value="Dr. Roberto Jaramillo" onchange="updateAdminName(this.value)">
     </div>
@@ -286,9 +327,9 @@
         <div style="display: flex; align-items: center; overflow: hidden;">
             <span id="chatWith" style="color: var(--aqua); font-weight: bold;">Esperando...</span>
             <span id="online-status">🔴 Offline</span>
-            <div id="typingStatus" style="font-size: 9px; color: #888; margin-left: 8px;"></div>
+            <div id="typingStatus" style="font-size: 11px; color: #aaa; margin-left: 8px;"></div>
         </div>
-        <button onclick="logout()" style="padding: 5px 10px; font-size: 10px; background: transparent; border: 1px solid var(--aqua); color: var(--aqua);">SALIR</button>
+        <button onclick="logout()" style="padding: 6px 12px; font-size: 11px; background: transparent; border: 1px solid var(--aqua); color: var(--aqua);">SALIR</button>
     </div>
     
     <div id="messages"></div>
@@ -304,7 +345,7 @@
     <div class="input-area">
         <button class="attach-btn" onclick="document.getElementById('imageInput').click()">📷</button>
         <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="sendImage(event)">
-        <input type="text" id="msgInput" placeholder="Escribe..." onkeypress="handleTyping()" onkeyup="if(event.key==='Enter') send()">
+        <input type="text" id="msgInput" placeholder="Escribe un mensaje..." onkeypress="handleTyping()" onkeyup="if(event.key==='Enter') send()">
         <button onclick="send()">Enviar</button>
     </div>
 </div>

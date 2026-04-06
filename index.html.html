@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Privado - Dr. Jaramillo</title>
+    <style>
+        :root {
+            --aqua: #00ffff;
+            --indigo: #4b0082;
+            --dark: #0a0e14;
+            --glass: rgba(255, 255, 255, 0.05);
+            --red: #ff4b4b;
+        }
+
+        body {
+            background-color: var(--dark);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Panel Admin --- */
+        #admin-panel {
+            width: 320px;
+            background: rgba(0, 0, 0, 0.8);
+            border-right: 1px solid var(--indigo);
+            display: none; 
+            flex-direction: column;
+        }
+
+        .chat-item {
+            padding: 15px;
+            border-bottom: 1px solid rgba(75, 0, 130, 0.3);
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-item:hover { background: var(--indigo); }
+
+        .chat-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+        }
+
+        .chat-name { font-weight: bold; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-email { font-size: 10px; color: var(--aqua); opacity: 0.7; }
+
+        .delete-btn {
+            color: var(--aqua);
+            background: transparent;
+            border: 1px solid var(--aqua);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .delete-btn:hover { background: var(--red); border-color: var(--red); color: white; }
+
+        #adminDisplayName {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--aqua);
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 10px;
+            outline: none;
+        }
+
+        /* --- Ventana de Chat --- */
+        #chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #0a0e14 100%);
+            position: relative; /* Para el menu de respuestas rapidas */
+        }
+
+        #chat-header {
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-bottom: 1px solid var(--indigo);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .msg {
+            padding: 12px 18px;
+            border-radius: 15px;
+            max-width: 70%;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .sender-name { font-size: 0.75em; margin-bottom: 4px; opacity: 0.8; font-weight: bold; }
+        .admin-msg { align-self: flex-end; background: var(--indigo); border: 1px solid var(--aqua); color: white; }
+        .user-msg { align-self: flex-start; background: var(--glass); border: 1px solid rgba(0, 255, 255, 0.3); color: var(--aqua); }
+
+        .input-area {
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            align-items: center;
+        }
+
+        input[type="text"], input[type="email"], input[type="password"] {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--indigo);
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: var(--aqua);
+            outline: none;
+        }
+
+        button {
+            background: var(--aqua);
+            color: black;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* --- NUEVOS ESTILOS AÑADIDOS --- */
+        .attach-btn {
+            background: var(--glass);
+            color: white;
+            border: 1px solid var(--indigo);
+            padding: 10px;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .attach-btn:hover { background: var(--indigo); border-color: var(--aqua); }
+
+        .canned-menu {
+            display: none; /* Oculto por defecto, se muestra al admin */
+            background: rgba(0,0,0,0.8);
+            border: 1px solid var(--indigo);
+            color: var(--aqua);
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin: 0 20px 10px 20px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        #online-status {
+            font-size: 11px;
+            margin-left: 8px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: rgba(255,0,0,0.1);
+            color: #ff4b4b;
+        }
+        /* ------------------------------ */
+
+        /* --- Modal de Acceso y Perfil --- */
+        #login-modal {
+            position: fixed;
+            inset: 0;
+            background: var(--dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-box {
+            background: #111;
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid var(--indigo);
+            text-align: center;
+            width: 350px;
+        }
+
+        .tab-btn { background: transparent; color: #666; border-bottom: 2px solid transparent; margin-bottom: 20px; border-radius: 0;}
+        .tab-active { color: var(--aqua); border-bottom: 2px solid var(--aqua); }
+        
+        #profile-completion { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="login-modal">
+    <div class="login-box">
+        <h2 id="modalTitle" style="color: var(--aqua); margin-top: 0;">SOPORTE TECNICO</h2>
+        
+        <div id="auth-forms">
+            <div style="display: flex; justify-content: space-around; margin-bottom: 10px;">
+                <button class="tab-btn tab-active" id="loginTab" onclick="switchAuth(true)">Ingresar</button>
+                <button class="tab-btn" id="registerTab" onclick="switchAuth(false)">Registrarse</button>
+            </div>
+            <input type="email" id="authEmail" placeholder="Correo electrónico">
+            <input type="password" id="authPass" placeholder="Contraseña" style="margin-top: 10px;">
+            <div id="nameContainer" style="display: none; margin-top: 10px;">
+                <input type="text" id="authName" placeholder="Tu Nombre Completo (Requerido)">
+            </div>
+            <button id="mainAuthBtn" style="width: 100%; margin-top: 15px;" onclick="handleAuth()">Entrar</button>
+        </div>
+
+        <div id="profile-completion">
+            <p style="font-size: 14px; color: #ccc; margin-bottom: 20px;">Tu cuenta no tiene un nombre asociado. Por favor, identifícate para continuar.</p>
+            <input type="text" id="missingNameInput" placeholder="Nombre y Apellido">
+            <button style="width: 100%; margin-top: 15px;" onclick="saveMissingName()">Actualizar y Entrar</button>
+        </div>
+
+        <p id="authHint" style="margin: 15px 0; color: #444; font-size: 11px;">Acceso restringido a usuarios identificados</p>
+    </div>
+</div>
+
+<div id="admin-panel">
+    <div style="padding: 20px; border-bottom: 1px solid var(--indigo);">
+        <div style="font-weight: bold; color: var(--aqua);">Control de Pacientes</div>
+        <input type="text" id="adminDisplayName" value="Dr. Roberto Jaramillo" onchange="updateAdminName(this.value)" title="Nombre público">
+    </div>
+    <div id="chat-list" style="overflow-y: auto; flex: 1;"></div>
+</div>
+
+<div id="chat-main">
+    <div id="chat-header">
+        <div style="display: flex; align-items: center;">
+            <span id="chatWith" style="color: var(--aqua); font-weight: bold;">Esperando...</span>
+            <span id="online-status">🔴 Offline</span>
+            <div id="typingStatus" style="font-size: 10px; color: #888; height: 12px; margin-left: 10px;"></div>
+        </div>
+        <button onclick="logout()" style="padding: 6px 15px; font-size: 11px; background: transparent; border: 1px solid var(--aqua); color: var(--aqua);">SALIR</button>
+    </div>
+    <div id="messages"></div>
+
+    <select id="canned-responses" class="canned-menu" onchange="insertCanned(this.value)">
+        <option value="">⚡ Respuestas rápidas...</option>
+        <option value="Hola, ¿en qué puedo ayudarte hoy?">Hola, ¿en qué puedo ayudarte hoy?</option>
+        <option value="Estamos revisando tu caso, un momento por favor.">Revisando tu caso, un momento por favor.</option>
+        <option value="¿Podrías enviarme una captura de pantalla del error?">Pedir captura de pantalla</option>
+        <option value="Tu problema ha sido resuelto. ¿Puedo ayudarte con algo más?">Cierre de ticket</option>
+    </select>
+
+    <div class="input-area">
+        <button class="attach-btn" onclick="document.getElementById('imageInput').click()" title="Enviar Imagen">📷</button>
+        <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="sendImage(event)">
+        
+        <input type="text" id="msgInput" placeholder="Escribe un mensaje..." onkeypress="handleTyping()" onkeyup="if(event.key==='Enter') send()">
+        <button onclick="send()">Enviar</button>
+    </div>
+</div>
+
+<audio id="beep" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
+
+<script type="module">
+    // IMPORTANTE: Añadida la importación de 'onDisconnect'
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getDatabase, ref, push, onChildAdded, onValue, set, remove, off, get, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCaPEZUjBGlUX0_99OqVLsPlxk-eSCL1XI",
+      authDomain: "synthlab-750bf.firebaseapp.com",
+      databaseURL: "https://synthlab-750bf-default-rtdb.firebaseio.com",
+      projectId: "synthlab-750bf",
+      storageBucket: "synthlab-750bf.firebasestorage.app",
+      messagingSenderId: "318338833192",
+      appId: "1:318338833192:web:67f46984d17e0984804e1d",
+      measurementId: "G-NJND6KMZ9T"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    let currentChatId = null;
+    let isAdmin = false;
+    let isLoginMode = true;
+    let typingTimeout;
+    let myName = "";
+    let currentUserUID = null;
+
+    window.updateAdminName = (newName) => {
+        if(isAdmin) set(ref(db, 'config/adminName'), newName);
+    };
+
+    window.switchAuth = (isLogin) => {
+        isLoginMode = isLogin;
+        document.getElementById('loginTab').className = isLogin ? 'tab-btn tab-active' : 'tab-btn';
+        document.getElementById('registerTab').className = isLogin ? 'tab-btn' : 'tab-btn tab-active';
+        document.getElementById('nameContainer').style.display = isLogin ? 'none' : 'block';
+        document.getElementById('mainAuthBtn').innerText = isLogin ? 'Entrar' : 'Crear Cuenta';
+    };
+
+    window.handleAuth = () => {
+        const email = document.getElementById('authEmail').value;
+        const pass = document.getElementById('authPass').value;
+        const name = document.getElementById('authName').value.trim();
+
+        if (isLoginMode) {
+            signInWithEmailAndPassword(auth, email, pass).catch(err => alert("Error: " + err.message));
+        } else {
+            if(!name) return alert("El nombre es obligatorio.");
+            createUserWithEmailAndPassword(auth, email, pass).then((cred) => {
+                set(ref(db, `nombres/${cred.user.uid}`), { nombre: name, email: email });
+            }).catch(err => alert("Error: " + err.message));
+        }
+    };
+
+    window.saveMissingName = () => {
+        const newName = document.getElementById('missingNameInput').value.trim();
+        if(!newName) return alert("Por favor ingresa tu nombre.");
+        
+        set(ref(db, `nombres/${currentUserUID}`), {
+            nombre: newName,
+            email: auth.currentUser.email
+        }).then(() => {
+            location.reload(); 
+        });
+    };
+
+    window.logout = () => signOut(auth);
+
+    // NUEVO: Listener Global para detectar el estado del Admin
+    onValue(ref(db, 'config/adminStatus'), (snap) => {
+        const statusEl = document.getElementById('online-status');
+        if(snap.val() === 'online') {
+            statusEl.style.background = 'rgba(0, 255, 0, 0.1)';
+            statusEl.style.color = '#00ff00';
+            statusEl.innerText = '🟢 En línea';
+        } else {
+            statusEl.style.background = 'rgba(255, 0, 0, 0.1)';
+            statusEl.style.color = '#ff4b4b';
+            statusEl.innerText = '🔴 Offline';
+        }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserUID = user.uid;
+            isAdmin = user.email === "admin@livechat.com"; 
+
+            get(ref(db, `nombres/${user.uid}`)).then((snapshot) => {
+                const data = snapshot.val();
+                
+                if (!isAdmin && (!data || !data.nombre)) {
+                    document.getElementById('auth-forms').style.display = 'none';
+                    document.getElementById('profile-completion').style.display = 'block';
+                    document.getElementById('modalTitle').innerText = "Perfil Incompleto";
+                } else {
+                    document.getElementById('login-modal').style.display = 'none';
+                    if (isAdmin) {
+                        document.getElementById('admin-panel').style.display = 'flex';
+                        
+                        // NUEVO: Mostrar menú de respuestas rápidas al admin
+                        document.getElementById('canned-responses').style.display = 'block';
+
+                        // NUEVO: Sistema de Presencia (Online/Offline) para el Admin
+                        const connectedRef = ref(db, '.info/connected');
+                        const myConnectionsRef = ref(db, 'config/adminStatus');
+                        onValue(connectedRef, (snap) => {
+                            if (snap.val() === true) {
+                                set(myConnectionsRef, 'online');
+                                onDisconnect(myConnectionsRef).set('offline');
+                            }
+                        });
+
+                        onValue(ref(db, 'config/adminName'), (s) => {
+                            if(s.exists()) document.getElementById('adminDisplayName').value = s.val();
+                        });
+                        loadAdminPanel();
+                    } else {
+                        currentChatId = user.uid;
+                        myName = data.nombre;
+                        onValue(ref(db, 'config/adminName'), (s) => {
+                            document.getElementById('chatWith').innerText = s.exists() ? s.val() : "Chat Médico";
+                        });
+                        listenToChat(user.uid);
+                    }
+                }
+            });
+        } else {
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('auth-forms').style.display = 'block';
+            document.getElementById('profile-completion').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'none';
+        }
+    });
+
+    window.deleteChat = (chatId, event) => {
+        event.stopPropagation(); 
+        if (confirm("¿Borrar historial y datos del usuario?")) {
+            remove(ref(db, `chats/${chatId}`));
+            remove(ref(db, `nombres/${chatId}`));
+            if (currentChatId === chatId) {
+                currentChatId = null;
+                document.getElementById('messages').innerHTML = "";
+                off(ref(db, `chats/${chatId}`));
+            }
+        }
+    };
+
+    function listenToChat(chatId) {
+        currentChatId = chatId;
+        const chatRef = ref(db, `chats/${chatId}`);
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = ""; 
+        
+        onChildAdded(chatRef, (snap) => {
+            if(snap.key === 'typing') return;
+            const data = snap.val();
+            const div = document.createElement('div');
+            const isMe = (isAdmin && data.sender === 'Admin') || (!isAdmin && data.sender === 'User');
+            div.className = `msg ${isMe ? 'admin-msg' : 'user-msg'}`;
+            
+            // NUEVO: Formateo de Timestamp
+            const msgTime = new Date(data.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            div.innerHTML = `
+                <div class="sender-name">${data.senderName}</div>
+                ${data.text}
+                <div style="font-size: 0.65em; text-align: right; opacity: 0.6; margin-top: 5px;">${msgTime}</div>
+            `;
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            if (!isMe && data.time > (Date.now() - 5000)) document.getElementById('beep').play(); 
+        });
+
+        onValue(ref(db, `chats/${chatId}/typing`), (snap) => {
+            const typing = snap.val();
+            const status = document.getElementById('typingStatus');
+            if (typing && typing.isTyping && typing.from !== (isAdmin ? 'Admin' : 'User')) {
+                status.innerText = "Escribiendo...";
+            } else { status.innerText = ""; }
+        });
+    }
+
+    function loadAdminPanel() {
+        onValue(ref(db, 'chats'), (snap) => {
+            const list = document.getElementById('chat-list');
+            list.innerHTML = "";
+            snap.forEach((child) => {
+                onValue(ref(db, `nombres/${child.key}`), (nSnap) => {
+                    const info = nSnap.val() || { nombre: "Sin Nombre", email: "Sin Correo" };
+                    const div = document.createElement('div');
+                    div.className = "chat-item";
+                    div.innerHTML = `
+                        <div class="chat-info">
+                            <span class="chat-name">👤 ${info.nombre}</span>
+                            <span class="chat-email">${info.email}</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteChat('${child.key}', event)">X</button>
+                    `;
+                    div.onclick = () => {
+                        document.getElementById('chatWith').innerText = `Chateando con: ${info.nombre}`;
+                        listenToChat(child.key);
+                    };
+                    list.appendChild(div);
+                });
+            });
+        });
+    }
+
+    window.handleTyping = () => {
+        if (!currentChatId) return;
+        set(ref(db, `chats/${currentChatId}/typing`), { isTyping: true, from: isAdmin ? 'Admin' : 'User' });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            set(ref(db, `chats/${currentChatId}/typing`), { isTyping: false });
+        }, 2000);
+    };
+
+    // NUEVO: Función para insertar respuestas rápidas
+    window.insertCanned = (val) => {
+        if(val) {
+            const input = document.getElementById('msgInput');
+            input.value = val;
+            input.focus();
+            document.getElementById('canned-responses').selectedIndex = 0; // resetear selector
+        }
+    };
+
+    // NUEVO: Función para subir y enviar imágenes (Base64 nativo)
+    window.sendImage = (event) => {
+        const file = event.target.files[0];
+        if(!file || !currentChatId) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Img = e.target.result;
+            const finalName = isAdmin ? document.getElementById('adminDisplayName').value : myName;
+            
+            // Enviamos el HTML de la imagen como si fuera el texto del mensaje
+            push(ref(db, `chats/${currentChatId}`), {
+                text: `<img src="${base64Img}" style="max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer;" onclick="window.open('${base64Img}')" />`,
+                sender: isAdmin ? 'Admin' : 'User',
+                senderName: finalName,
+                time: Date.now()
+            });
+            event.target.value = ""; // Limpiar el input
+        };
+        reader.readAsDataURL(file); // Transforma la imagen en cadena de texto
+    };
+
+    window.send = () => {
+        const input = document.getElementById('msgInput');
+        if (!input.value.trim() || !currentChatId) return;
+        const finalName = isAdmin ? document.getElementById('adminDisplayName').value : myName;
+        push(ref(db, `chats/${currentChatId}`), {
+            text: input.value,
+            sender: isAdmin ? 'Admin' : 'User',
+            senderName: finalName,
+            time: Date.now()
+        });
+        set(ref(db, `chats/${currentChatId}/typing`), { isTyping: false });
+        input.value = "";
+    };
+</script>
+</body>
+</html>

@@ -107,6 +107,35 @@
             outline: none;
         }
 
+        /* Estilos para foto de perfil del admin */
+        .admin-profile-section {
+            padding: 15px;
+            border-bottom: 1px solid var(--indigo);
+            text-align: center;
+        }
+        .admin-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--aqua);
+            cursor: pointer;
+            margin-bottom: 8px;
+            background: var(--indigo);
+        }
+        .admin-avatar:hover { opacity: 0.8; }
+        .change-avatar-btn {
+            background: transparent;
+            border: 1px solid var(--aqua);
+            color: var(--aqua);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        .change-avatar-btn:hover { background: var(--aqua); color: black; }
+
         /* --- Ventana de Chat --- */
         #chat-main {
             flex: 1;
@@ -116,6 +145,7 @@
             position: relative;
             width: 100%;
             height: 100dvh; 
+            transition: background 0.3s ease;
         }
 
         #chat-header {
@@ -159,6 +189,7 @@
             display: block;
             margin-top: 8px;
             border-radius: 8px; 
+            cursor: pointer;
         }
 
         .msg {
@@ -187,7 +218,6 @@
             gap: 8px;
             background: rgba(0, 0, 0, 0.85);
             align-items: center;
-            /* MEJORA MÓVIL: Ajuste para evitar que el teclado tape el input */
             padding-bottom: calc(15px + env(safe-area-inset-bottom));
             border-top: 1px solid rgba(75, 0, 130, 0.5);
             z-index: 5;
@@ -202,7 +232,7 @@
             padding: 12px 15px;
             color: white;
             outline: none;
-            font-size: 16px; /* Evita zoom automático en iOS */
+            font-size: 16px;
             transition: border-color 0.3s;
         }
         input[type="text"]:focus { border-color: var(--aqua); }
@@ -238,21 +268,34 @@
         .file-link { color: var(--aqua); text-decoration: underline; display: flex; align-items: center; gap: 5px; font-weight: bold; }
         audio { height: 35px; width: 220px; max-width: 100%; outline: none; margin-top: 5px; }
 
+        /* Botón para cambiar fondo */
+        #changeBgBtn {
+            background: transparent;
+            border: 1px solid var(--aqua);
+            color: var(--aqua);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        #changeBgBtn:hover { background: var(--aqua); color: black; }
+
         @media (max-width: 768px) {
-            #admin-panel { position: absolute; height: 100dvh; width: 85%; max-width: 320px; box-shadow: 5px 0 15px rgba(0,0,0,0.5); transition: transform 0.3s ease; }
+            #admin-panel { position: absolute; height: 100dvh; width: 85%; max-width: 320px; box-shadow: 5px 0 15px rgba(0,0,0,0.5); transition: transform 0.3s ease; z-index: 20; background: rgba(0,0,0,0.98); }
             .msg { max-width: 90%; }
             .login-box { padding: 25px 20px; }
             #chat-header { padding-left: 10px; padding-right: 10px; }
             #chatWith { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
             button { padding: 10px 15px; font-size: 14px; }
-            /* MEJORA MÓVIL: Botones de ícono un poco más compactos */
             .icon-btn { width: 40px; height: 40px; min-width: 40px; font-size: 16px; }
         }
 
         .tab-btn { background: transparent; color: #666; border-bottom: 2px solid transparent; margin-bottom: 20px; border-radius: 0;}
         .tab-active { color: var(--aqua); border-bottom: 2px solid var(--aqua); }
         #profile-completion { display: none; }
-        #loading-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 20; color: var(--aqua); justify-content: center; align-items: center; font-weight: bold; }
+        #loading-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 20; color: var(--aqua); justify-content: center; align-items: center; font-weight: bold; flex-direction: column; gap: 10px; }
+        .loading-spinner { width: 40px; height: 40px; border: 3px solid var(--indigo); border-top-color: var(--aqua); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -285,6 +328,16 @@
         <div style="font-weight: bold; color: var(--aqua); font-size: 14px;">Pacientes</div>
         <button onclick="document.getElementById('admin-panel').style.display='none'" style="display:none; padding: 4px 8px; font-size: 10px;" id="closeAdminMobile">Cerrar</button>
     </div>
+    
+    <!-- Sección de foto de perfil del admin -->
+    <div class="admin-profile-section">
+        <img id="adminAvatar" class="admin-avatar" src="https://ui-avatars.com/api/?background=4b0082&color=00ffff&name=DR" alt="Foto de perfil" onclick="document.getElementById('avatarInput').click()">
+        <div>
+            <button class="change-avatar-btn" onclick="document.getElementById('avatarInput').click()">📷 Cambiar foto</button>
+        </div>
+        <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="uploadAdminAvatar(event)">
+    </div>
+    
     <div style="padding: 0 15px;">
         <input type="text" id="adminDisplayName" value="Dr. Roberto Jaramillo" onchange="updateAdminName(this.value)">
     </div>
@@ -292,11 +345,14 @@
 </div>
 
 <div id="chat-main">
-    <div id="loading-overlay">Cargando archivo...</div>
+    <div id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div>Subiendo archivo...</div>
+    </div>
     <div id="chat-header">
         <div style="display: flex; align-items: center; overflow: hidden; gap: 8px;">
             <button id="menuBtn" style="display:none; padding: 5px; background: transparent; border:none; color: var(--aqua); font-size: 18px; margin-right: 5px;" onclick="toggleAdminPanel()">☰</button>
-            <div style="width: 35px; height: 35px; border-radius: 50%; background: var(--indigo); display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px;">👤</div>
+            <div style="width: 35px; height: 35px; border-radius: 50%; background: var(--indigo); display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px;" id="chatAvatar">👤</div>
             <div style="display: flex; flex-direction: column;">
                 <span id="chatWith" style="color: var(--aqua); font-weight: bold;">Esperando...</span>
                 <div style="display: flex; align-items: center;">
@@ -306,6 +362,7 @@
             </div>
         </div>
         <div class="header-tools">
+            <button id="changeBgBtn" onclick="changeChatBackground()">🎨 Fondo</button>
             <input type="text" id="search-box" placeholder="Buscar mensaje..." onkeyup="searchMessages(this.value)">
             <button onclick="toggleSearch()" class="icon-btn" style="width: 30px; height: 30px; font-size: 12px; background:transparent;">🔍</button>
             <button onclick="logout()" style="padding: 6px 12px; font-size: 11px; background: transparent; border: 1px solid var(--aqua); color: var(--aqua);">SALIR</button>
@@ -322,8 +379,8 @@
     </select>
 
     <div class="input-area">
-        <button class="icon-btn" onclick="document.getElementById('fileInput').click()" title="Adjuntar foto o PDF">📎</button>
-        <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx" style="display:none;" onchange="uploadMedia(event)">
+        <button class="icon-btn" id="attachBtn" onclick="document.getElementById('fileInput').click()" title="Adjuntar foto o PDF">📎</button>
+        <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx" style="display:none;" onchange="uploadMedia(event)">
         
         <input type="text" id="msgInput" placeholder="Mensaje..." onkeypress="handleTyping()" onkeyup="if(event.key==='Enter') sendText()">
         
@@ -339,7 +396,6 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getDatabase, ref, push, onChildAdded, onValue, set, update, remove, off, get, onDisconnect, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
     import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-    // MEJORA: Importación de Firebase Cloud Messaging para notificaciones
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
     const firebaseConfig = {
@@ -357,7 +413,7 @@
     const auth = getAuth(app);
     const db = getDatabase(app);
     const storage = getStorage(app);
-    const messaging = getMessaging(app); // Inicializar Messaging
+    const messaging = getMessaging(app);
 
     let currentChatId = null;
     let isAdmin = false;
@@ -369,7 +425,122 @@
     let mediaRecorder;
     let audioChunks = [];
 
-    // --- UI Helpers ---
+    // Función corregida para subir archivos
+    window.uploadMedia = async (event) => {
+        const file = event.target.files[0];
+        if (!file || !currentChatId) {
+            console.log("No hay archivo o chat seleccionado");
+            return;
+        }
+        
+        const loadingOverlay = document.getElementById('loading-overlay');
+        loadingOverlay.style.display = 'flex';
+        
+        try {
+            const isImage = file.type.startsWith('image/');
+            const fileExtension = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
+            const fileRef = sRef(storage, `chats/${currentChatId}/${fileName}`);
+            
+            console.log("Subiendo archivo:", file.name);
+            await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(fileRef);
+            console.log("Archivo subido, URL:", downloadURL);
+            
+            await sendMessagePayload({
+                type: isImage ? 'image' : 'file',
+                url: downloadURL,
+                fileName: file.name
+            });
+            
+            alert(isImage ? "Imagen enviada correctamente" : "Archivo enviado correctamente");
+        } catch(e) {
+            console.error("Error detallado:", e);
+            alert("Error al subir archivo: " + e.message + ". Verifica las reglas de Firebase Storage.");
+        }
+        
+        loadingOverlay.style.display = 'none';
+        event.target.value = ""; // Limpiar el input
+    };
+
+    // Función para subir avatar del admin
+    window.uploadAdminAvatar = async (event) => {
+        const file = event.target.files[0];
+        if (!file || !isAdmin) return;
+        
+        const loadingOverlay = document.getElementById('loading-overlay');
+        loadingOverlay.style.display = 'flex';
+        loadingOverlay.querySelector('div:last-child').innerText = 'Subiendo foto de perfil...';
+        
+        const avatarRef = sRef(storage, `admin/avatar_${Date.now()}`);
+        try {
+            await uploadBytes(avatarRef, file);
+            const avatarUrl = await getDownloadURL(avatarRef);
+            await set(ref(db, 'config/adminAvatar'), avatarUrl);
+            document.getElementById('adminAvatar').src = avatarUrl;
+            alert('Foto de perfil actualizada correctamente');
+        } catch(e) {
+            console.error("Error al subir avatar:", e);
+            alert('Error al subir foto: ' + e.message);
+        }
+        loadingOverlay.style.display = 'none';
+        event.target.value = "";
+        loadingOverlay.querySelector('div:last-child').innerText = 'Subiendo archivo...';
+    };
+    
+    // Cargar avatar del admin
+    function loadAdminAvatar() {
+        onValue(ref(db, 'config/adminAvatar'), (snap) => {
+            if (snap.exists() && snap.val()) {
+                document.getElementById('adminAvatar').src = snap.val();
+            }
+        });
+    }
+    
+    // Cambiar fondo de pantalla del chat
+    window.changeChatBackground = () => {
+        const bgOptions = [
+            'radial-gradient(circle at center, #1a1a2e 0%, #0a0e14 100%)',
+            'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+            'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+            'linear-gradient(135deg, #3a1c71 0%, #d76d77 50%, #ffaf7b 100%)',
+            'repeating-linear-gradient(45deg, #1a1a2e 0px, #1a1a2e 2px, #16213e 2px, #16213e 8px)',
+            '#0a0e14'
+        ];
+        
+        let currentBg = document.getElementById('chat-main').style.background;
+        let currentIndex = bgOptions.findIndex(bg => bg === currentBg);
+        if (currentIndex === -1) currentIndex = 0;
+        let nextIndex = (currentIndex + 1) % bgOptions.length;
+        const newBg = bgOptions[nextIndex];
+        document.getElementById('chat-main').style.background = newBg;
+        
+        // Guardar preferencia en Firebase
+        if (isAdmin && currentUserUID) {
+            set(ref(db, 'config/chatBackground'), newBg);
+        } else if (currentUserUID) {
+            set(ref(db, `preferencias/${currentUserUID}/chatBackground`), newBg);
+        }
+    };
+    
+    // Cargar fondo guardado
+    function loadChatBackground() {
+        if (isAdmin) {
+            get(ref(db, 'config/chatBackground')).then((snap) => {
+                if (snap.exists() && snap.val()) {
+                    document.getElementById('chat-main').style.background = snap.val();
+                }
+            });
+        } else if (currentUserUID) {
+            get(ref(db, `preferencias/${currentUserUID}/chatBackground`)).then((snap) => {
+                if (snap.exists() && snap.val()) {
+                    document.getElementById('chat-main').style.background = snap.val();
+                }
+            });
+        }
+    }
+
+    // --- UI Helpers (todo lo demás se mantiene igual) ---
     window.toggleAdminPanel = () => {
         const panel = document.getElementById('admin-panel');
         panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'flex' : 'none';
@@ -432,15 +603,11 @@
         }
     });
 
-    // MEJORA: Solicitar permisos para notificaciones
     async function setupNotifications(uid) {
         try {
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
-                const token = await getToken(messaging, { 
-                    // Nota: En producción, es altamente recomendado generar un vapidKey en Firebase Console (Cloud Messaging)
-                    // vapidKey: 'TU_LLAVE_VAPID_AQUI' 
-                });
+                const token = await getToken(messaging, {});
                 if (token) {
                     set(ref(db, `tokensNotificacion/${uid}`), token);
                 }
@@ -450,11 +617,8 @@
         }
     }
 
-    // Manejar notificaciones cuando la app está abierta
     onMessage(messaging, (payload) => {
-        // Reproducir sonido o mostrar alerta visual si el mensaje llega
         document.getElementById('beep').play();
-        // Podrías mostrar un toast nativo aquí si lo deseas
     });
 
     onAuthStateChanged(auth, (user) => {
@@ -462,7 +626,6 @@
             currentUserUID = user.uid;
             isAdmin = user.email === "admin@livechat.com"; 
 
-            // Activar notificaciones al iniciar sesión
             setupNotifications(user.uid);
 
             get(ref(db, `nombres/${user.uid}`)).then((snapshot) => {
@@ -479,6 +642,8 @@
                             document.getElementById('closeAdminMobile').style.display = 'block';
                         }
                         document.getElementById('canned-responses').style.display = 'block';
+                        loadAdminAvatar();
+                        loadChatBackground();
 
                         const connectedRef = ref(db, '.info/connected');
                         const myConnectionsRef = ref(db, 'config/adminStatus');
@@ -494,6 +659,7 @@
                     } else {
                         currentChatId = user.uid;
                         myName = data.nombre;
+                        loadChatBackground();
                         onValue(ref(db, 'config/adminName'), (s) => { document.getElementById('chatWith').innerText = s.exists() ? s.val() : "Soporte Médico"; });
                         listenToChat(user.uid);
                     }
@@ -553,15 +719,15 @@
             const msgTime = new Date(data.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
             let contentHtml = "";
-            if(data.type === 'image') contentHtml = `<img src="${data.url}" onclick="window.open('${data.url}')" />`;
-            else if(data.type === 'file') contentHtml = `<a href="${data.url}" target="_blank" class="file-link">📄 Ver Documento</a>`;
+            if(data.type === 'image') contentHtml = `<img src="${data.url}" onclick="window.open('${data.url}')" style="max-width: 100%; max-height: 300px; cursor: pointer;" />`;
+            else if(data.type === 'file') contentHtml = `<a href="${data.url}" target="_blank" class="file-link">📄 ${data.fileName || 'Ver Documento'}</a>`;
             else if(data.type === 'audio') contentHtml = `<audio controls src="${data.url}"></audio>`;
-            else contentHtml = data.text;
+            else contentHtml = data.text ? data.text.replace(/\n/g, '<br>') : '';
 
             const readIcon = isMe ? `<span id="receipt-${msgKey}" class="read-receipt ${data.read ? 'read' : 'sent'}">✓✓</span>` : '';
 
             div.innerHTML = `
-                <div class="sender-name">${data.senderName}</div>
+                <div class="sender-name">${data.senderName || (data.sender === 'Admin' ? 'Admin' : 'Usuario')}</div>
                 ${contentHtml}
                 <div class="msg-meta">
                     <span>${msgTime}</span>
@@ -591,14 +757,13 @@
                 const chatId = child.key;
                 
                 let unreadCount = 0;
-                let hasNew = false;
                 child.forEach((msgSnap) => {
                     if(msgSnap.key !== 'typing') {
                         const m = msgSnap.val();
                         if(m.sender === 'User' && !m.read) unreadCount++;
                     }
                 });
-                hasNew = unreadCount > 0;
+                const hasNew = unreadCount > 0;
 
                 onValue(ref(db, `nombres/${chatId}`), (nSnap) => {
                     const info = nSnap.val() || { nombre: "Sin Nombre", email: "Sin Correo" };
@@ -645,32 +810,6 @@
         }
     };
 
-    window.uploadMedia = async (event) => {
-        const file = event.target.files[0];
-        if(!file || !currentChatId) return;
-        
-        document.getElementById('loading-overlay').style.display = 'flex';
-        
-        const isImage = file.type.startsWith('image/');
-        const fileRef = sRef(storage, `chats/${currentChatId}/${Date.now()}_${file.name}`);
-        
-        try {
-            await uploadBytes(fileRef, file);
-            const downloadURL = await getDownloadURL(fileRef);
-            
-            sendMessagePayload({
-                type: isImage ? 'image' : 'file',
-                url: downloadURL,
-                fileName: file.name
-            });
-        } catch(e) {
-            alert("Error al subir archivo. Verifica que Firebase Storage esté activado.");
-        }
-        
-        document.getElementById('loading-overlay').style.display = 'none';
-        event.target.value = "";
-    };
-
     window.startRecording = async () => {
         if(!currentChatId) return;
         try {
@@ -687,15 +826,17 @@
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 audioChunks = [];
                 
-                document.getElementById('loading-overlay').style.display = 'flex';
-                document.getElementById('loading-overlay').innerText = 'Enviando audio...';
+                const loadingOverlay = document.getElementById('loading-overlay');
+                loadingOverlay.style.display = 'flex';
+                loadingOverlay.querySelector('div:last-child').innerText = 'Enviando audio...';
 
                 const audioRef = sRef(storage, `chats/${currentChatId}/audio_${Date.now()}.webm`);
                 await uploadBytes(audioRef, audioBlob);
                 const audioUrl = await getDownloadURL(audioRef);
                 
-                sendMessagePayload({ type: 'audio', url: audioUrl });
-                document.getElementById('loading-overlay').style.display = 'none';
+                await sendMessagePayload({ type: 'audio', url: audioUrl });
+                loadingOverlay.style.display = 'none';
+                loadingOverlay.querySelector('div:last-child').innerText = 'Subiendo archivo...';
             };
             
             mediaRecorder.start();
@@ -710,7 +851,7 @@
         }
     };
 
-    function sendMessagePayload(dataObj) {
+    async function sendMessagePayload(dataObj) {
         if (!currentChatId) return;
         const finalName = isAdmin ? document.getElementById('adminDisplayName').value : myName;
         
@@ -722,11 +863,10 @@
             ...dataObj
         };
 
-        push(ref(db, `chats/${currentChatId}`), payload);
+        await push(ref(db, `chats/${currentChatId}`), payload);
         set(ref(db, `chats/${currentChatId}/typing`), { isTyping: false });
     }
 
-    // Completamos la función que se cortaba al final
     window.sendText = () => {
         const input = document.getElementById('msgInput');
         if (!input.value.trim()) return;

@@ -731,7 +731,16 @@
             const msgTime = new Date(data.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
             let contentHtml = "";
-            if(data.type === 'image') contentHtml = `<img src="${data.url}" onclick="window.open('${data.url}')" style="max-width: 100%; max-height: 300px; cursor: pointer;" />`;
+            if(data.type === 'image') {
+                contentHtml = `
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <img src="${data.url}" onclick="window.open('${data.url}')" style="max-width: 100%; max-height: 300px; cursor: pointer;" />
+                        <a href="${data.url}" download="imagen_${data.time}.png" style="color: var(--aqua); font-size: 12px; text-decoration: underline; cursor: pointer; align-self: flex-start;">
+                        ⬇️ descargar
+                        </a>
+                    </div>
+                `;
+            }
             else if(data.type === 'file') contentHtml = `<a href="${data.url}" target="_blank" class="file-link">📄 ${data.fileName || 'Ver Documento'}</a>`;
             else if(data.type === 'audio') contentHtml = `<audio controls src="${data.url}"></audio>`;
             else contentHtml = data.text ? data.text.replace(/\n/g, '<br>') : '';

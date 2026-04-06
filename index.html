@@ -426,6 +426,8 @@
     let audioChunks = [];
 
     // Función corregida para subir archivos
+    // Función mejorada para subir archivos e imágenes
+    // Función para subir archivos convertidos a Base64 (Sin usar Storage)
     window.uploadMedia = async (event) => {
         const file = event.target.files[0];
         if (!file || !currentChatId) {
@@ -438,29 +440,39 @@
         
         try {
             const isImage = file.type.startsWith('image/');
-            const fileExtension = file.name.split('.').pop();
-            const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
-            const fileRef = sRef(storage, `chats/${currentChatId}/${fileName}`);
             
-            console.log("Subiendo archivo:", file.name);
-            await uploadBytes(fileRef, file);
-            const downloadURL = await getDownloadURL(fileRef);
-            console.log("Archivo subido, URL:", downloadURL);
+            // Usamos FileReader para convertir el archivo a Base64
+            const reader = new FileReader();
             
-            await sendMessagePayload({
-                type: isImage ? 'image' : 'file',
-                url: downloadURL,
-                fileName: file.name
-            });
+            reader.onload = async (e) => {
+                const base64URL = e.target.result;
+                console.log("Archivo convertido a Base64 con éxito");
+                
+                // Enviamos la cadena Base64 en lugar de la URL de Storage
+                await sendMessagePayload({
+                    type: isImage ? 'image' : 'file',
+                    url: base64URL,
+                    fileName: file.name
+                });
+                
+                loadingOverlay.style.display = 'none';
+                event.target.value = ""; // Limpiar el input
+                alert(isImage ? "Imagen enviada correctamente" : "Archivo enviado correctamente");
+            };
+
+            reader.onerror = (err) => {
+                throw new Error("Error al leer el archivo");
+            };
+
+            // Esto lee el archivo y activa el evento 'onload' de arriba
+            reader.readAsDataURL(file);
             
-            alert(isImage ? "Imagen enviada correctamente" : "Archivo enviado correctamente");
         } catch(e) {
             console.error("Error detallado:", e);
-            alert("Error al subir archivo: " + e.message + ". Verifica las reglas de Firebase Storage.");
+            loadingOverlay.style.display = 'none';
+            event.target.value = "";
+            alert("Error al procesar el archivo: " + e.message);
         }
-        
-        loadingOverlay.style.display = 'none';
-        event.target.value = ""; // Limpiar el input
     };
 
     // Función para subir avatar del admin
